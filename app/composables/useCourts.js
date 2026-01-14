@@ -1,5 +1,4 @@
 import { createCourtsRepo } from "@/lib/repositories/courts.repo";
-import { mapBookingToScheduleXEvent } from "@/lib/mappers/scheduleX.mapper";
 
 export function useCourts() {
   const supabase = useSupabaseClient();
@@ -13,8 +12,7 @@ export function useCourts() {
     error.value = null;
     try {
       const rows = await repo.list();
-      // return rows.map(mapBookingToScheduleXEvent);
-      return rows
+      return rows;
     } catch (e) {
       error.value = e;
       throw e;
@@ -28,7 +26,7 @@ export function useCourts() {
     error.value = null;
     try {
       const row = await repo.create(payload);
-      return mapBookingToScheduleXEvent(row);
+      return row;
     } catch (e) {
       error.value = e;
       throw e;

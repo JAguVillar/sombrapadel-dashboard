@@ -1,5 +1,4 @@
 import { createBookingsTypesRepo } from "@/lib/repositories/bookingTypes.repo";
-import { mapBookingToScheduleXEvent } from "@/lib/mappers/scheduleX.mapper";
 
 export function useBookingsTypes() {
   const supabase = useSupabaseClient();
@@ -8,13 +7,12 @@ export function useBookingsTypes() {
   const loading = ref(false);
   const error = ref(null);
 
-  async function loadBookinkgTypes() {
+  async function loadBookingTypes() {
     loading.value = true;
     error.value = null;
     try {
       const rows = await repo.list();
-      // return rows.map(mapBookingToScheduleXEvent);
-      return rows
+      return rows;
     } catch (e) {
       error.value = e;
       throw e;
@@ -28,7 +26,7 @@ export function useBookingsTypes() {
     error.value = null;
     try {
       const row = await repo.create(payload);
-      return mapBookingToScheduleXEvent(row);
+      return row;
     } catch (e) {
       error.value = e;
       throw e;
@@ -37,5 +35,5 @@ export function useBookingsTypes() {
     }
   }
 
-  return { loadBookinkgTypes, createBookingType, loading, error };
+  return { loadBookingTypes, createBookingType, loading, error };
 }

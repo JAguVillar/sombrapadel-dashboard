@@ -1,5 +1,4 @@
-<script setup lang="ts">
-import type { NavigationMenuItem } from "@nuxt/ui";
+<script setup>
 
 const toast = useToast();
 
@@ -24,7 +23,7 @@ const links = [
       },
     },
   ],
-] satisfies NavigationMenuItem[][];
+];
 
 onMounted(async () => {
   const cookie = useCookie("cookie-consent");

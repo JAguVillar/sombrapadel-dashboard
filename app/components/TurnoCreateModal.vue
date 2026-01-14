@@ -9,9 +9,9 @@ import {
 import { useToast } from "#imports";
 
 const { createBooking } = useBookings();
-const { loadBookinkgTypes } = useBookingsTypes();
-const { loadCourts } = useCourts ? useCourts() : { loadCourts: null };
-const { loadClients } = useClients ? useClients() : { loadClients: null };
+const { loadBookingTypes } = useBookingsTypes();
+const { loadCourts } = useCourts();
+const { loadClients } = useClients();
 
 const props = defineProps({
   initialDate: String, // "2026-01-08"
@@ -56,7 +56,7 @@ onMounted(async () => {
   const typesCourts = await loadCourts?.();
   courts.value = typesCourts ?? [];
 
-  const typesRows = await loadBookinkgTypes?.();
+  const typesRows = await loadBookingTypes?.();
   types.value = typesRows ?? [];
 
   const clientsRows = await loadClients?.();

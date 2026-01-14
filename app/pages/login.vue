@@ -1,6 +1,5 @@
-<script setup lang="ts">
+<script setup>
 import * as z from "zod";
-import type { FormSubmitEvent, AuthFormField } from "@nuxt/ui";
 
 definePageMeta({ layout: "main" });
 
@@ -8,10 +7,10 @@ const toast = useToast();
 const supabase = useSupabaseClient();
 const router = useRouter();
 
-const mode = ref<"login" | "register">("login");
+const mode = ref("login");
 const loading = ref(false);
 
-const fields: AuthFormField[] = [
+const fields = [
   {
     name: "email",
     type: "email",
@@ -39,9 +38,7 @@ const schema = z.object({
   remember: z.boolean().optional(),
 });
 
-type Schema = z.output<typeof schema>;
-
-async function onSubmit({ data }: FormSubmitEvent<Schema>) {
+async function onSubmit({ data }) {
   loading.value = true;
 
   const { email, password, remember } = data;

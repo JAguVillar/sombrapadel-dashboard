@@ -332,7 +332,7 @@ onMounted(async () => {
         <UModal v-model:open="open">
           <UButton label="Cargar turno" />
           <template #content>
-            <TurnoCreateModalVue
+            <TurnoCreateModal
               :initial-date="selectedDate"
               :initial-from="selectedFrom"
               :initial-to="selectedTo"
