@@ -1,12 +1,5 @@
 <script setup>
-import {
-  shallowRef,
-  ref,
-  onMounted,
-  nextTick,
-  watch,
-  computed,
-} from "vue";
+import { shallowRef, ref, onMounted, nextTick, watch, computed } from "vue";
 import { ScheduleXCalendar } from "@schedule-x/vue";
 import { translations, mergeLocales } from "@schedule-x/translations";
 import {
@@ -105,10 +98,10 @@ function buildCalendarsFromCourts(courts) {
 
       const colors = hasDbColors
         ? {
-          main: c.color_main,
-          container: c.color_container,
-          onContainer: c.color_on_container,
-        }
+            main: c.color_main,
+            container: c.color_container,
+            onContainer: c.color_on_container,
+          }
         : palette[idx % palette.length];
 
       return [
@@ -122,14 +115,13 @@ function buildCalendarsFromCourts(courts) {
           },
         },
       ];
-    })
+    }),
   );
 }
 
 async function getBookingsWeek() {
   // Cargar todos los turnos sin filtros de fecha
   const events = await loadRange({});
-
 
   allEvents.value = events ?? [];
   applyCourtFilter();
@@ -209,7 +201,7 @@ function openWhatsappWeb(phoneDigits, message) {
   window.open(
     `https://wa.me/${phoneDigits}?text=${text}`,
     "_blank",
-    "noopener,noreferrer"
+    "noopener,noreferrer",
   );
 }
 
@@ -252,7 +244,7 @@ async function deleteEvent(calendarEvent) {
 
   // 2) UI (cache -> re-set)
   allEvents.value = (allEvents.value ?? []).filter(
-    (e) => e.id !== calendarEvent.id
+    (e) => e.id !== calendarEvent.id,
   );
   applyCourtFilter();
 
@@ -312,12 +304,12 @@ onMounted(async () => {
 
         const date = `${start.year}-${String(start.month).padStart(
           2,
-          "0"
+          "0",
         )}-${String(start.day).padStart(2, "0")}`;
 
         const from = `${String(start.hour).padStart(2, "0")}:00`;
         const to = `${String(end.hour).padStart(2, "0")}:${String(
-          end.minute
+          end.minute,
         ).padStart(2, "0")}`;
 
         selectedDate.value = date;
@@ -361,43 +353,78 @@ onMounted(async () => {
 
 <template>
   <div class="min-h-0 flex flex-col">
-    <TurnoDetailsSlideover v-model:open="slideoverOpen" :calendar-event="selectedEvent" @delete="deleteEvent" />
+    <TurnoDetailsSlideover
+      v-model:open="slideoverOpen"
+      :calendar-event="selectedEvent"
+      @delete="deleteEvent"
+    />
 
-
-    <div class="sticky top-0 z-20 border-b border-default bg-background/90 backdrop-blur">
+    <div
+      class="sticky top-0 z-20 border-b border-default bg-background/90 backdrop-blur"
+    >
       <div class="p-4 space-y-3">
         <!-- Fila 1: acciones -->
         <div class="flex items-center justify-between gap-2">
-          <UButton label="Ir a hora actual" icon="i-lucide-clock" variant="outline" size="md" @click="scrollToNow()" />
+          <UButton
+            label="Ir a hora actual"
+            icon="i-lucide-clock"
+            variant="outline"
+            size="md"
+            @click="scrollToNow()"
+          />
 
           <div class="space-x-4">
             <UModal v-model:open="open">
               <UButton label="Cargar turno" icon="i-lucide-plus" size="md" />
               <template #content>
-                <TurnoCreateModal :initial-date="selectedDate" :initial-from="selectedFrom" :initial-to="selectedTo"
-                  @created="handleCreated" @close="open = false" />
+                <TurnoCreateModal
+                  :initial-date="selectedDate"
+                  :initial-from="selectedFrom"
+                  :initial-to="selectedTo"
+                  @created="handleCreated"
+                  @close="open = false"
+                />
               </template>
             </UModal>
 
             <UModal v-model:open="openFijo">
-              <UButton label="Cargar fijo" icon="i-lucide-calendar-clock" size="md" />
+              <UButton
+                label="Cargar fijo"
+                icon="i-lucide-calendar-clock"
+                size="md"
+              />
               <template #content>
-                <TurnoFijoCreateModal :initial-date="selectedDate" :initial-from="selectedFrom" :initial-to="selectedTo"
-                  @created="handleCreated" @close="openFijo = false" />
+                <TurnoFijoCreateModal
+                  :initial-date="selectedDate"
+                  :initial-from="selectedFrom"
+                  :initial-to="selectedTo"
+                  @created="handleCreated"
+                  @close="openFijo = false"
+                />
               </template>
             </UModal>
           </div>
         </div>
 
         <!-- Fila 2: filtros -->
-        <UFieldGroup label="Canchas" class="pt-2" :ui="{
-          container: 'mt-1',
-          description: 'text-xs',
-        }">
+        <UFieldGroup
+          label="Canchas"
+          class="pt-2"
+          :ui="{
+            container: 'mt-1',
+            description: 'text-xs',
+          }"
+        >
           <UButtonGroup class="gap-2 w-full sm:w-auto">
-            <UButton v-for="b in courtButtons" :key="b.value" :label="b.label"
-              :variant="selectedCourtSlug === b.value ? 'solid' : 'outline'" size="md" class="flex-1 sm:flex-none"
-              @click="selectedCourtSlug = b.value" />
+            <UButton
+              v-for="b in courtButtons"
+              :key="b.value"
+              :label="b.label"
+              :variant="selectedCourtSlug === b.value ? 'solid' : 'outline'"
+              size="md"
+              class="flex-1 sm:flex-none"
+              @click="selectedCourtSlug = b.value"
+            />
           </UButtonGroup>
         </UFieldGroup>
       </div>
@@ -408,3 +435,11 @@ onMounted(async () => {
     </div>
   </div>
 </template>
+
+<style>
+.customClass {
+  background: #fee2e2 !important;
+  color: #7f1d1d !important;
+  border-left: 4px solid #ef4444 !important;
+}
+</style>

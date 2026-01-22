@@ -7,23 +7,22 @@ function toZdt(isoString) {
 }
 
 export function mapBookingToScheduleXEvent(booking) {
-  console.log(booking);
+  // const state = booking.booking_state?.slug || booking.booking_state || "unknown";
 
   return {
     id: booking.id,
-    title: `${booking.booking_type?.icon ?? ""}${
-      booking.title ?? `Turno - ${booking.court?.name ?? ""}`
-    }`,
+    title: `${booking.booking_type?.icon ?? ""}${booking.title ?? `Turno - ${booking.court?.name ?? ""}`}`,
     start: toZdt(booking.start_at),
     end: toZdt(booking.end_at),
     calendarId: booking.court?.slug,
-    description: "salkdfjaklsd",
-    people: ["Agustin"],
+
+    _options: {
+      additionalClasses: ['customClass'], // 👈 clave
+    },
+
     meta: {
       state: booking.booking_state,
-      client:{
-        client: booking.client
-      }
+      client: { client: booking.client },
     },
   };
 }
