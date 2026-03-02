@@ -1,7 +1,5 @@
 <script setup>
 import * as z from "zod";
-import { useToast } from "#imports";
-
 const emit = defineEmits(["close", "created"]);
 const { createClient } = useClients();
 

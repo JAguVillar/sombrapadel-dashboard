@@ -1,73 +1,62 @@
 <script setup>
-import { h, resolveComponent, ref, computed, onMounted } from "vue";
-import { useToast } from "#imports";
+import { UButton } from "#components"
 
-const UButton = resolveComponent("UButton");
+const { loadClients, deleteClient } = useClients()
+const toast = useToast()
 
-const { loadClients, deleteClient } = useClients();
-const toast = useToast();
+const loading = ref(false)
+const rows = ref([])
 
-const loading = ref(false);
-const rows = ref([]);
+const openCreate = ref(false)
 
-const openCreate = ref(false);
-
-// ✅ modal confirm
-const openConfirmDelete = ref(false);
-const clientToDelete = ref(null);
-const deleting = ref(false);
+const openConfirmDelete = ref(false)
+const clientToDelete = ref(null)
+const deleting = ref(false)
 
 function getClientName(client) {
   return (
     client?.full_name ||
     `${client?.first_name ?? ""} ${client?.last_name ?? ""}`.trim() ||
     "este cliente"
-  );
+  )
 }
 
 function onEdit(client) {
-  console.log("edit", client);
+  console.log("edit", client)
 }
 
-// ✅ ahora onDelete solo abre modal
 function onDelete(client) {
-  clientToDelete.value = client;
-  openConfirmDelete.value = true;
+  clientToDelete.value = client
+  openConfirmDelete.value = true
 }
 
-// ✅ confirmar eliminación
 async function confirmDelete() {
-  if (!clientToDelete.value || deleting.value) return;
+  if (!clientToDelete.value || deleting.value) return
 
-  deleting.value = true;
+  deleting.value = true
   try {
-    await deleteClient(clientToDelete.value.id);
+    await deleteClient(clientToDelete.value.id)
 
     toast.add({
       title: "Cliente eliminado",
       description: "Se eliminó correctamente",
       color: "success",
-    });
+    })
 
-    openConfirmDelete.value = false;
-    clientToDelete.value = null;
+    openConfirmDelete.value = false
+    clientToDelete.value = null
 
-    await getClients();
+    await getClients()
   } catch (e) {
-    console.error(e);
+    console.error(e)
     toast.add({
       title: "Error",
       description: "No se pudo eliminar el cliente",
       color: "error",
-    });
+    })
   } finally {
-    deleting.value = false;
+    deleting.value = false
   }
-}
-
-function cancelDelete() {
-  openConfirmDelete.value = false;
-  clientToDelete.value = null;
 }
 
 const columns = computed(() => [
@@ -76,9 +65,7 @@ const columns = computed(() => [
     header: "Cliente",
     cell: ({ row }) =>
       row.getValue("full_name") ||
-      `${row.getValue("first_name") ?? ""} ${
-        row.getValue("last_name") ?? ""
-      }`.trim(),
+      `${row.getValue("first_name") ?? ""} ${row.getValue("last_name") ?? ""}`.trim(),
   },
   {
     accessorKey: "phone",
@@ -88,7 +75,7 @@ const columns = computed(() => [
     accessorKey: "actions",
     header: "",
     cell: ({ row }) => {
-      const client = row.original;
+      const client = row.original
       return h("div", { class: "flex items-center justify-end gap-1" }, [
         h(UButton, {
           icon: "i-lucide-pencil",
@@ -103,26 +90,26 @@ const columns = computed(() => [
           color: "error",
           onClick: () => onDelete(client),
         }),
-      ]);
+      ])
     },
   },
-]);
+])
 
 async function getClients() {
-  loading.value = true;
+  loading.value = true
   try {
-    const clients = await loadClients();
-    rows.value = clients ?? [];
+    const clients = await loadClients()
+    rows.value = clients ?? []
   } finally {
-    loading.value = false;
+    loading.value = false
   }
 }
 
-onMounted(getClients);
+onMounted(getClients)
 </script>
 
 <template>
-  <UDashboardPanel id="home">
+  <UDashboardPanel id="clientes">
     <template #header>
       <UDashboardNavbar title="Clientes" :ui="{ right: 'gap-3' }">
         <template #leading>
@@ -132,12 +119,11 @@ onMounted(getClients);
     </template>
 
     <template #body>
-      <div class="flex justify-between px-4 py-3.5 border-b border-accented">
-        <UInput class="max-w-sm" placeholder="Filter..." />
+      <div class="flex flex-col gap-3 px-4 py-3.5 border-b border-accented sm:flex-row sm:items-center sm:justify-between">
+        <UInput class="w-full sm:max-w-sm" placeholder="Buscar..." />
 
-        <!-- Modal create -->
         <UModal v-model:open="openCreate">
-          <UButton label="Cargar cliente" icon="i-lucide-plus" size="md" />
+          <UButton label="Cargar cliente" icon="i-lucide-plus" size="md" class="w-full sm:w-auto" />
           <template #content>
             <ClientesClienteCreateModal
               @created="getClients()"
@@ -149,59 +135,13 @@ onMounted(getClients);
 
       <BaseTable :rows="rows" :columns="columns" :loading="loading" />
 
-      <!-- ✅ Modal confirm delete -->
-      <UModal v-model:open="openConfirmDelete">
-        <template #content>
-          <UCard>
-            <template #header>
-              <div class="flex items-center justify-between">
-                <h3 class="font-semibold">Eliminar cliente</h3>
-                <UButton
-                  icon="i-lucide-x"
-                  variant="ghost"
-                  color="neutral"
-                  :disabled="deleting"
-                  @click="cancelDelete"
-                />
-              </div>
-            </template>
-
-            <div class="space-y-2">
-              <p class="text-sm">
-                ¿Seguro que querés eliminar a
-                <span class="font-medium">{{
-                  getClientName(clientToDelete)
-                }}</span
-                >?
-              </p>
-              <p class="text-xs text-gray-500">
-                Esta acción no se puede deshacer.
-              </p>
-            </div>
-
-            <template #footer>
-              <div class="flex justify-end gap-2">
-                <UButton
-                  variant="outline"
-                  color="neutral"
-                  :disabled="deleting"
-                  @click="cancelDelete"
-                >
-                  Cancelar
-                </UButton>
-
-                <UButton
-                  color="error"
-                  :loading="deleting"
-                  @click="confirmDelete"
-                >
-                  Eliminar
-                </UButton>
-              </div>
-            </template>
-          </UCard>
-        </template>
-      </UModal>
+      <ConfirmModal
+        v-model:open="openConfirmDelete"
+        title="Eliminar cliente"
+        :item-name="getClientName(clientToDelete)"
+        :loading="deleting"
+        @confirm="confirmDelete"
+      />
     </template>
   </UDashboardPanel>
 </template>

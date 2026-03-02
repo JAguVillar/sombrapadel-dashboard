@@ -1,32 +1,38 @@
 <script setup>
-import { shallowRef, ref, onMounted, nextTick, watch, computed } from "vue";
-import { ScheduleXCalendar } from "@schedule-x/vue";
-import { translations, mergeLocales } from "@schedule-x/translations";
+import { ScheduleXCalendar } from "@schedule-x/vue"
+import { translations, mergeLocales } from "@schedule-x/translations"
 import {
   createCalendar,
   createViewDay,
   createViewWeek,
   createViewList,
-} from "@schedule-x/calendar";
-import { createEventsServicePlugin } from "@schedule-x/events-service";
-import "@schedule-x/theme-default/dist/index.css";
-import { createCurrentTimePlugin } from "@schedule-x/current-time";
+} from "@schedule-x/calendar"
+import { createEventsServicePlugin } from "@schedule-x/events-service"
+import "@schedule-x/theme-default/dist/index.css"
+import { createCurrentTimePlugin } from "@schedule-x/current-time"
 
-const ready = ref(false);
-const calendarApp = shallowRef();
-const open = ref(false);
-const openFijo = ref(false);
+const {
+  normalizePhoneForWaMe,
+  buildConfirmationMessage,
+  buildPaymentMessage,
+  openWhatsappWeb,
+} = useWhatsapp()
 
-const selectedDate = ref(null);
-const selectedFrom = ref(null);
-const selectedTo = ref(null);
+const ready = ref(false)
+const calendarApp = shallowRef()
+const open = ref(false)
+const openFijo = ref(false)
 
-const courts = ref([]); // canchas para UI
-const clients = ref([]); // ✅ clientes para WhatsApp
+const selectedDate = ref(null)
+const selectedFrom = ref(null)
+const selectedTo = ref(null)
 
-const allEvents = ref([]); // cache de eventos (Schedule-X events)
-const selectedCourtSlug = ref("all"); // "all" | "court1" | "court2"...
-const calendarSelectedDate = ref(null);
+const courts = ref([])
+const clients = ref([])
+
+const allEvents = ref([])
+const selectedCourtSlug = ref("all")
+const calendarSelectedDate = ref(null)
 
 const courtButtons = computed(() => [
   { label: "Todas", value: "all" },
@@ -34,32 +40,27 @@ const courtButtons = computed(() => [
     label: c.name ?? c.slug,
     value: c.slug,
   })),
-]);
+])
 
 defineShortcuts({
   o: () => (open.value = !open.value),
-});
+})
 
-let eventsService;
+let eventsService
 
-const TZ = "America/Argentina/Buenos_Aires";
-const { loadRange } = useBookings();
-// ✅ si ya tenés delete en tu composable, lo usamos.
-// Si no existe, queda undefined y seguimos con borrado solo UI.
-const { deleteBooking } = useBookings();
+const TZ = "America/Argentina/Buenos_Aires"
+const { loadRange, deleteBooking } = useBookings()
+const { loadCourts } = useCourts()
+const { loadClients } = useClients()
 
-const { loadCourts } = useCourts();
-const { loadClients } = useClients(); // ✅
+const scrollContainerRef = ref(null)
 
-const scrollContainerRef = ref(null);
-
-/** ✅ Slideover (click en evento) **/
-const slideoverOpen = ref(false);
-const selectedEvent = ref(null);
+const slideoverOpen = ref(false)
+const selectedEvent = ref(null)
 
 function openSlideover(ev) {
-  selectedEvent.value = ev ?? null;
-  slideoverOpen.value = true;
+  selectedEvent.value = ev ?? null
+  slideoverOpen.value = true
 }
 
 function floorToHour(zdt) {
@@ -69,32 +70,32 @@ function floorToHour(zdt) {
     millisecond: 0,
     microsecond: 0,
     nanosecond: 0,
-  });
+  })
 }
 
 function applyCourtFilter() {
-  if (!eventsService) return;
+  if (!eventsService) return
 
   const filtered =
     selectedCourtSlug.value === "all"
       ? allEvents.value
-      : allEvents.value.filter((e) => e.calendarId === selectedCourtSlug.value);
+      : allEvents.value.filter((e) => e.calendarId === selectedCourtSlug.value)
 
-  eventsService.set(filtered);
+  eventsService.set(filtered)
 }
 
-function buildCalendarsFromCourts(courts) {
+function buildCalendarsFromCourts(courtsList) {
   const palette = [
     { main: "#22c55e", container: "#dcfce7", onContainer: "#052e16" },
     { main: "#3b82f6", container: "#dbeafe", onContainer: "#172554" },
     { main: "#f97316", container: "#ffedd5", onContainer: "#7c2d12" },
     { main: "#a855f7", container: "#f3e8ff", onContainer: "#3b0764" },
-  ];
+  ]
 
   return Object.fromEntries(
-    (courts ?? []).map((c, idx) => {
+    (courtsList ?? []).map((c, idx) => {
       const hasDbColors =
-        c.color_main && c.color_container && c.color_on_container;
+        c.color_main && c.color_container && c.color_on_container
 
       const colors = hasDbColors
         ? {
@@ -102,7 +103,7 @@ function buildCalendarsFromCourts(courts) {
             container: c.color_container,
             onContainer: c.color_on_container,
           }
-        : palette[idx % palette.length];
+        : palette[idx % palette.length]
 
       return [
         c.slug,
@@ -114,95 +115,49 @@ function buildCalendarsFromCourts(courts) {
             onContainer: colors.onContainer,
           },
         },
-      ];
+      ]
     }),
-  );
+  )
 }
 
 async function getBookingsWeek() {
-  // Cargar todos los turnos sin filtros de fecha
-  const events = await loadRange({});
-
-  allEvents.value = events ?? [];
-  applyCourtFilter();
+  const events = await loadRange({})
+  allEvents.value = events ?? []
+  applyCourtFilter()
 }
 
 async function scrollToNow({ retries = 30, delay = 50 } = {}) {
-  await nextTick();
+  await nextTick()
 
-  const container = scrollContainerRef.value;
-  if (!container) return;
+  const container = scrollContainerRef.value
+  if (!container) return
 
   const findNowLine = () =>
     container.querySelector(".sx__current-time-indicator") ||
     container.querySelector(".sx__current-time") ||
-    container.querySelector('[class*="current-time"]');
+    container.querySelector('[class*="current-time"]')
 
   const doScroll = (nowLine) => {
-    const cRect = container.getBoundingClientRect();
-    const nRect = nowLine.getBoundingClientRect();
-    const currentScroll = container.scrollTop;
-    const offsetInside = nRect.top - cRect.top + currentScroll;
-    const target = offsetInside - container.clientHeight / 2;
+    const cRect = container.getBoundingClientRect()
+    const nRect = nowLine.getBoundingClientRect()
+    const currentScroll = container.scrollTop
+    const offsetInside = nRect.top - cRect.top + currentScroll
+    const target = offsetInside - container.clientHeight / 2
 
     container.scrollTo({
       top: Math.max(0, target),
       behavior: "smooth",
-    });
-  };
+    })
+  }
 
   for (let i = 0; i < retries; i++) {
-    const nowLine = findNowLine();
+    const nowLine = findNowLine()
     if (nowLine) {
-      requestAnimationFrame(() => doScroll(nowLine));
-      return;
+      requestAnimationFrame(() => doScroll(nowLine))
+      return
     }
-    await new Promise((r) => setTimeout(r, delay));
+    await new Promise((r) => setTimeout(r, delay))
   }
-}
-
-/** ✅ WhatsApp Web helpers **/
-function normalizePhoneForWaMe(phoneRaw) {
-  if (!phoneRaw) return null;
-  const digits = String(phoneRaw).replace(/\D/g, "");
-  if (!digits) return null;
-
-  if (digits.startsWith("54")) return digits;
-
-  return `549${digits}`;
-}
-
-function buildWhatsappMessage({
-  clientName,
-  dateStr,
-  from,
-  to,
-  courtName,
-  typeName,
-  title,
-}) {
-  const headerName = clientName ? `Hola ${clientName}!` : "Hola!";
-  const t = title ? `📝 ${title}\n` : "";
-
-  return (
-    `👋 ${headerName}\n` +
-    `✅ Turno confirmado\n\n` +
-    `📅 ${dateStr}\n` +
-    `⏰ ${from} - ${to}\n` +
-    (courtName ? `🎾 Cancha: ${courtName}\n` : "") +
-    (typeName ? `🏷️ Tipo: ${typeName}\n` : "") +
-    t +
-    `\nCualquier cosa respondé este mensaje.`
-  );
-}
-
-function openWhatsappWeb(phoneDigits, message) {
-  const text = encodeURIComponent(message);
-  window.open(
-    `https://wa.me/${phoneDigits}?text=${text}`,
-    "_blank",
-    "noopener,noreferrer",
-  );
 }
 
 async function createGalioPaymentLink({ amount, title, referenceId }) {
@@ -220,54 +175,25 @@ async function createGalioPaymentLink({ amount, title, referenceId }) {
       success: "https://tusitio.com/pago-exitoso",
       failure: "https://tusitio.com/pago-fallido",
     },
-  };
+  }
 
   return await $fetch("/api/galio/payment-link", {
     method: "POST",
     body: payload,
-  });
+  })
 }
 
-function buildWhatsappPaymentMessage({
-  clientName,
-  dateStr,
-  from,
-  to,
-  courtName,
-  title,
-  paymentUrl,
-  amountLabel,
-}) {
-  const headerName = clientName ? `Hola ${clientName}!` : "Hola!";
-  const t = title ? `📝 ${title}\n` : "";
-
-  return (
-    `👋 ${headerName}\n` +
-    `✅ Turno reservado\n\n` +
-    `📅 ${dateStr}\n` +
-    `⏰ ${from} - ${to}\n` +
-    (courtName ? `🎾 Cancha: ${courtName}\n` : "") +
-    t +
-    `\n💳 Para confirmar, aboná ${amountLabel} acá:\n` +
-    `${paymentUrl}\n\n` +
-    `Cualquier cosa respondé este mensaje.`
-  );
-}
-
-/** ✅ Handler que llama el modal */
 async function handleCreated(payload) {
-  await getBookingsWeek();
+  await getBookingsWeek()
 
-  const client = clients.value.find((c) => c.id === payload?.clientId) ?? null;
-  const phoneDigits = normalizePhoneForWaMe(client?.phone);
-  if (!phoneDigits) return;
+  const client = clients.value.find((c) => c.id === payload?.clientId) ?? null
+  const phoneDigits = normalizePhoneForWaMe(client?.phone)
+  if (!phoneDigits) return
 
   const courtName =
-    courts.value.find((c) => c.id === payload?.courtId)?.name ?? "";
+    courts.value.find((c) => c.id === payload?.courtId)?.name ?? ""
 
-  // 1) (opcional) mensaje de confirmación simple (el que ya tenías)
-  // Si preferís mandar SOLO el pago, comentá este bloque.
-  const confirmMessage = buildWhatsappMessage({
+  const confirmMessage = buildConfirmationMessage({
     clientName: client?.full_name ?? "",
     dateStr: payload?.date ?? "",
     from: payload?.from ?? "",
@@ -275,42 +201,35 @@ async function handleCreated(payload) {
     courtName,
     typeName: "",
     title: payload?.title ?? "",
-  });
-  openWhatsappWeb(phoneDigits, confirmMessage);
+  })
+  openWhatsappWeb(phoneDigits, confirmMessage)
 
-  // 2) generar link de pago
-  // Acá definís el monto: seña fija o porcentaje.
-  // EJ: seña fija
-  const amount = 3000;
+  const amount = 3000
 
-  // Si querés porcentaje del total, necesitás el total calculado en backend o tab, etc.
-  // const amount = Math.round(Number(payload?.total ?? 0) * 0.3)
-
-  if (!amount || amount <= 0) return;
+  if (!amount || amount <= 0) return
 
   const referenceId = payload?.bookingId
     ? `turno-${payload.bookingId}`
     : payload?.id
       ? `turno-${payload.id}`
-      : `turno-${Date.now()}`;
+      : `turno-${Date.now()}`
 
-  let payment;
+  let payment
   try {
     payment = await createGalioPaymentLink({
       amount,
       title: `Seña turno ${courtName}`,
       referenceId,
-    });
+    })
   } catch (e) {
-    console.error("Error creando link de pago Galio:", e);
-    return;
+    console.error("Error creando link de pago Galio:", e)
+    return
   }
 
-  const paymentUrl = payment?.url;
-  if (!paymentUrl) return;
+  const paymentUrl = payment?.url
+  if (!paymentUrl) return
 
-  // 3) mandar WhatsApp con link
-  const payMessage = buildWhatsappPaymentMessage({
+  const payMessage = buildPaymentMessage({
     clientName: client?.full_name ?? "",
     dateStr: payload?.date ?? "",
     from: payload?.from ?? "",
@@ -319,63 +238,51 @@ async function handleCreated(payload) {
     title: payload?.title ?? "",
     paymentUrl,
     amountLabel: `*$${amount}*`,
-  });
+  })
 
-  openWhatsappWeb(phoneDigits, payMessage);
+  openWhatsappWeb(phoneDigits, payMessage)
 }
 
-/** ✅ DELETE: backend (si existe) + UI */
 async function deleteEvent(calendarEvent) {
-  // 1) backend
   try {
     if (typeof deleteBooking === "function") {
-      await deleteBooking(calendarEvent.id);
+      await deleteBooking(calendarEvent.id)
     }
   } catch (e) {
-    console.error("Error borrando en backend:", e);
-    // Si querés bloquear el borrado en UI cuando falla backend:
-    // return;
+    console.error("Error borrando en backend:", e)
   }
 
-  // 2) UI (cache -> re-set)
   allEvents.value = (allEvents.value ?? []).filter(
     (e) => e.id !== calendarEvent.id,
-  );
-  applyCourtFilter();
+  )
+  applyCourtFilter()
 
-  // 3) cerrar slideover si estaba mostrando este evento
   if (selectedEvent.value?.id === calendarEvent?.id) {
-    slideoverOpen.value = false;
-    selectedEvent.value = null;
+    slideoverOpen.value = false
+    selectedEvent.value = null
   }
 }
 
 onMounted(async () => {
-  const { Temporal } = await import("temporal-polyfill");
-  globalThis.Temporal = Temporal;
+  calendarSelectedDate.value = globalThis.Temporal.Now.zonedDateTimeISO(TZ).toPlainDate()
+  eventsService = createEventsServicePlugin()
 
-  calendarSelectedDate.value = Temporal.Now.zonedDateTimeISO(TZ).toPlainDate();
-  eventsService = createEventsServicePlugin();
-
-  // cargar courts
-  let loadedCourts = [];
+  let loadedCourts = []
   try {
-    if (!loadCourts) throw new Error("No existe loadCourts() en tu proyecto");
-    loadedCourts = await loadCourts();
+    loadedCourts = await loadCourts()
   } catch (e) {
-    console.error("Error cargando courts:", e);
-    loadedCourts = [];
+    console.error("Error cargando courts:", e)
+    loadedCourts = []
   }
 
-  courts.value = loadedCourts ?? [];
-  const calendarsFromDb = buildCalendarsFromCourts(courts.value);
+  courts.value = loadedCourts ?? []
+  const calendarsFromDb = buildCalendarsFromCourts(courts.value)
 
-  // ✅ cargar clients (para WhatsApp)
   try {
-    clients.value = (await loadClients()) ?? [];
+    clients.value = (await loadClients()) ?? []
   } catch (e) {
-    console.error("Error cargando clients:", e);
-    clients.value = [];
+    console.error("Error cargando clients:", e)
+    clients.value = []
   }
 
   calendarApp.value = createCalendar({
@@ -394,30 +301,22 @@ onMounted(async () => {
 
     callbacks: {
       onClickDateTime(dateTime) {
-        const start = floorToHour(dateTime);
-        const end = start.add({ minutes: 60 });
+        const start = floorToHour(dateTime)
+        const end = start.add({ minutes: 60 })
 
-        const date = `${start.year}-${String(start.month).padStart(
-          2,
-          "0",
-        )}-${String(start.day).padStart(2, "0")}`;
+        const date = `${start.year}-${String(start.month).padStart(2, "0")}-${String(start.day).padStart(2, "0")}`
+        const from = `${String(start.hour).padStart(2, "0")}:00`
+        const to = `${String(end.hour).padStart(2, "0")}:${String(end.minute).padStart(2, "0")}`
 
-        const from = `${String(start.hour).padStart(2, "0")}:00`;
-        const to = `${String(end.hour).padStart(2, "0")}:${String(
-          end.minute,
-        ).padStart(2, "0")}`;
+        selectedDate.value = date
+        selectedFrom.value = from
+        selectedTo.value = to
 
-        selectedDate.value = date;
-        selectedFrom.value = from;
-        selectedTo.value = to;
-
-        open.value = true;
+        open.value = true
       },
 
       onEventClick(event) {
-        // ✅ Reemplaza el modal nativo por un slideover
-        console.log("event click:", event);
-        openSlideover(event);
+        openSlideover(event)
       },
     },
 
@@ -427,23 +326,23 @@ onMounted(async () => {
 
     calendars: calendarsFromDb,
     events: [],
-  });
+  })
 
   try {
-    await getBookingsWeek();
+    await getBookingsWeek()
   } catch (e) {
-    console.error("Error cargando bookings:", e);
+    console.error("Error cargando bookings:", e)
   }
 
-  ready.value = true;
+  ready.value = true
 
-  scrollToNow();
-  watch(ready, (v) => v && scrollToNow());
+  scrollToNow()
+  watch(ready, (v) => v && scrollToNow())
 
   watch(selectedCourtSlug, () => {
-    applyCourtFilter();
-  });
-});
+    applyCourtFilter()
+  })
+})
 </script>
 
 <template>
@@ -459,18 +358,19 @@ onMounted(async () => {
     >
       <div class="p-4 space-y-3">
         <!-- Fila 1: acciones -->
-        <div class="flex items-center justify-between gap-2">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <UButton
             label="Ir a hora actual"
             icon="i-lucide-clock"
             variant="outline"
             size="md"
+            class="w-full sm:w-auto"
             @click="scrollToNow()"
           />
 
-          <div class="space-x-4">
+          <div class="flex gap-2">
             <UModal v-model:open="open">
-              <UButton label="Cargar turno" icon="i-lucide-plus" size="md" />
+              <UButton label="Cargar turno" icon="i-lucide-plus" size="md" class="flex-1 sm:flex-none" />
               <template #content>
                 <TurnoCreateModal
                   :initial-date="selectedDate"
@@ -487,6 +387,7 @@ onMounted(async () => {
                 label="Cargar fijo"
                 icon="i-lucide-calendar-clock"
                 size="md"
+                class="flex-1 sm:flex-none"
               />
               <template #content>
                 <TurnoFijoCreateModal
@@ -510,7 +411,7 @@ onMounted(async () => {
             description: 'text-xs',
           }"
         >
-          <UButtonGroup class="gap-2 w-full sm:w-auto">
+          <UButtonGroup class="flex flex-wrap gap-2 w-full sm:w-auto">
             <UButton
               v-for="b in courtButtons"
               :key="b.value"

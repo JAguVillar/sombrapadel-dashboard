@@ -6,8 +6,6 @@ import {
   CalendarDate,
   parseTime,
 } from "@internationalized/date";
-import { useToast } from "#imports";
-
 const TZ = "America/Argentina/Buenos_Aires";
 
 const { createFixedBookings } = useBookings();

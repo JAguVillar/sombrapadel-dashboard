@@ -1,10 +1,15 @@
 <script setup>
-import { computed, ref, watch } from "vue"
+const {
+  normalizePhoneForWaMe,
+  buildTabSummaryMessage,
+  toDateSafe,
+  openWhatsappWeb,
+} = useWhatsapp()
 
 const props = defineProps({
   open: { type: Boolean, default: false },
   calendarEvent: { type: Object, default: null },
-  widthClass: { type: String, default: "max-w-none w-[420px] sm:w-[520px]" },
+  widthClass: { type: String, default: "w-full sm:w-[420px] md:w-[520px] max-w-full" },
   title: { type: String, default: "Detalle del turno" },
   deleting: { type: Boolean, default: false },
 })
@@ -32,34 +37,14 @@ function onCheckOut() {
   openConfirmCheckOut.value = true
 }
 
-function cancelDelete() {
-  openConfirmDelete.value = false
-}
-
 async function confirmDelete() {
   openConfirmDelete.value = false
   emit("delete", props.calendarEvent)
 }
 
-// Placeholder: acá va tu lógica real de checkout/cierre
 async function confirmCheckout() {
   openConfirmCheckOut.value = false
   // TODO: close tab / marcar estado / etc
-}
-
-/** helpers */
-function stripBracketTz(v) {
-  if (!v) return v
-  const s = String(v)
-  const idx = s.indexOf("[")
-  return idx >= 0 ? s.slice(0, idx) : s
-}
-
-function toDateSafe(v) {
-  if (!v) return null
-  const cleaned = stripBracketTz(v)
-  const d = new Date(cleaned)
-  return Number.isNaN(d.getTime()) ? null : d
 }
 
 const turnoId = computed(() => props.calendarEvent?.id || null)
@@ -69,9 +54,7 @@ const startAny = computed(() => props.calendarEvent?.start_at ?? props.calendarE
 const endAny = computed(() => props.calendarEvent?.end_at ?? props.calendarEvent?.end ?? null)
 
 const courtName = computed(() => {
-  // nuevo: viene court { name }
   if (props.calendarEvent?.court?.name) return props.calendarEvent.court.name
-  // viejo: schedule-x: calendarId (slug)
   return props.calendarEvent?.calendarId || ""
 })
 
@@ -86,9 +69,7 @@ const subtitle = computed(() => {
   return `${dateStr} · ${timeFmt.format(start)} — ${timeFmt.format(end)}`
 })
 
-// -------------------
 // Tabs auto-load
-// -------------------
 const {
   loading: tabsLoading,
   loadTabBundleByTurnoId,
@@ -129,102 +110,14 @@ async function handleAddItem({ productId, qty }) {
   await loadBundle()
 }
 
-// -------------------
-// WhatsApp helpers (SIN export)
-// -------------------
-function normalizePhoneForWaMe(phoneRaw) {
-  if (!phoneRaw) return null
-  const digits = String(phoneRaw).replace(/\D/g, "")
-  if (!digits) return null
-  if (digits.startsWith("54")) return digits
-  return `549${digits}`
-}
-
-function formatDateTimeRange(calendarEvent) {
-  const rawStart = calendarEvent?.start_at ?? calendarEvent?.start ?? null
-  const rawEnd = calendarEvent?.end_at ?? calendarEvent?.end ?? null
-
-  const start = toDateSafe(rawStart)
-  const end = toDateSafe(rawEnd)
-
-  if (!start || !end) {
-    return { dateStr: "", from: "", to: "" }
-  }
-
-  const dateStr = new Intl.DateTimeFormat("es-AR", { dateStyle: "long" }).format(start)
-  const timeFmt = new Intl.DateTimeFormat("es-AR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  })
-
-  return {
-    dateStr,
-    from: timeFmt.format(start),
-    to: timeFmt.format(end),
-  }
-}
-
-
-function buildWhatsappMessageFromTurno({ calendarEvent, tab, items = [] }) {
-  const client = calendarEvent?.client
-  const court = calendarEvent?.court
-  const type = calendarEvent?.booking_type
-
-  const clientName = client?.first_name || client?.full_name || null
-  const headerName = clientName ? `Hola ${clientName}!` : "Hola!"
-
-  const { dateStr, from, to } = formatDateTimeRange(calendarEvent)
-
-  const title = calendarEvent?.title || null
-  const t = title ? `📝 ${title}\n` : ""
-
-  const itemsText = items.length
-    ? items
-      .map(
-        (it) =>
-          `• ${it.name_snapshot}: ${it.qty} × $${it.unit_price_snapshot} = $${it.line_total}`
-      )
-      .join("\n")
-    : "• Sin consumos"
-
-  const total = tab?.total ?? null
-  const totalLine = total != null ? `\n\n💰 *Total: $${total}*` : ""
-
-  // courtName: soporta court.name o calendarId
-  const courtName = court?.name ?? calendarEvent?.calendarId ?? ""
-
-  return (
-    `👋 ${headerName}\n\n` +
-    `🧾 *Detalle del turno*\n\n` +
-    (dateStr ? `📅 ${dateStr}\n` : "") +
-    (from && to ? `⏰ ${from} - ${to}\n` : "") +
-    (courtName ? `🎾 Cancha: ${courtName}\n` : "") +
-    (type?.name ? `🏷️ Tipo: ${type.name}\n` : "") +
-    t +
-    `\n📋 *Cuenta:*\n` +
-    `${itemsText}` +
-    totalLine +
-    `\n\nCualquier cosa respondé este mensaje.`
-  )
-}
-
-function openWhatsappWeb(phoneDigits, message) {
-  const text = encodeURIComponent(message)
-  const url = phoneDigits
-    ? `https://wa.me/${phoneDigits}?text=${text}`
-    : `https://wa.me/?text=${text}`
-
-  window.open(url, "_blank", "noopener,noreferrer")
-}
-
 function onSendWhatsapp() {
   if (!props.calendarEvent || !tab.value) return
 
-  const phoneDigits = props.calendarEvent?.meta?.client?.client?.phone
-  console.log(phoneDigits);
+  const phoneDigits = normalizePhoneForWaMe(
+    props.calendarEvent?.meta?.client?.client?.phone
+  )
 
-  const message = buildWhatsappMessageFromTurno({
+  const message = buildTabSummaryMessage({
     calendarEvent: props.calendarEvent,
     tab: tab.value,
     items: items.value,
@@ -233,9 +126,6 @@ function onSendWhatsapp() {
   openWhatsappWeb(phoneDigits, message)
 }
 
-// -------------------
-// Computeds
-// -------------------
 const hasTab = computed(() => !!tab.value)
 const tabSubtotal = computed(() => tab.value?.subtotal ?? 0)
 const tabTotal = computed(() => tab.value?.total ?? 0)
@@ -279,7 +169,7 @@ watch(
                 :disabled="!turnoId" @click="onCreateTab" />
             </div>
 
-            <div v-else class="flex items-center justify-between gap-3">
+            <div v-else class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div class="text-sm text-muted">
                 <span v-if="tabsLoading">Cargando cuenta…</span>
                 <span v-else>Cuenta</span>
@@ -295,7 +185,6 @@ watch(
             </div>
           </template>
 
-          <!-- Si existe tab: mostrás items + totales -->
           <div v-if="hasTab" class="space-y-3">
             <div class="text-xs text-muted">
               Tab: <span class="font-mono">{{ tab.id }}</span> · Estado:
@@ -338,10 +227,10 @@ watch(
     </template>
 
     <template #footer>
-      <div class="flex justify-between w-full">
+      <div class="flex flex-col gap-2 w-full sm:flex-row sm:justify-between">
         <UButton color="error" variant="subtle" label="Eliminar" icon="i-lucide-trash-2"
-          :disabled="!calendarEvent || deleting" :loading="deleting" @click="onDelete" size="lg" />
-        <UButton label="Cerrar turno" icon="i-lucide-bookmark-x" @click="onCheckOut" size="lg" />
+          :disabled="!calendarEvent || deleting" :loading="deleting" @click="onDelete" size="lg" class="w-full sm:w-auto" />
+        <UButton label="Cerrar turno" icon="i-lucide-bookmark-x" @click="onCheckOut" size="lg" class="w-full sm:w-auto" />
       </div>
     </template>
   </USlideover>
@@ -354,63 +243,21 @@ watch(
   </UModal>
 
   <!-- Confirm Delete -->
-  <UModal v-model:open="openConfirmDelete">
-    <template #content>
-      <UCard>
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h3 class="font-semibold">Eliminar turno</h3>
-            <UButton icon="i-lucide-x" variant="ghost" color="neutral" @click="openConfirmDelete = false" />
-          </div>
-        </template>
-
-        <div class="space-y-2">
-          <p class="text-sm">¿Seguro que querés eliminar el turno seleccionado?</p>
-          <p class="text-xs text-gray-500">Esta acción no se puede deshacer.</p>
-        </div>
-
-        <template #footer>
-          <div class="flex justify-end gap-2">
-            <UButton variant="outline" color="neutral" :disabled="deleting" @click="cancelDelete">
-              Cancelar
-            </UButton>
-            <UButton color="error" :loading="deleting" @click="confirmDelete">
-              Eliminar
-            </UButton>
-          </div>
-        </template>
-      </UCard>
-    </template>
-  </UModal>
+  <ConfirmModal
+    v-model:open="openConfirmDelete"
+    title="Eliminar turno"
+    message="¿Seguro que querés eliminar el turno seleccionado?"
+    :loading="deleting"
+    @confirm="confirmDelete"
+  />
 
   <!-- Confirm Checkout -->
-  <UModal v-model:open="openConfirmCheckOut">
-    <template #content>
-      <UCard>
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h3 class="font-semibold">Cerrar turno</h3>
-            <UButton icon="i-lucide-x" variant="ghost" color="neutral" @click="openConfirmCheckOut = false" />
-          </div>
-        </template>
-
-        <div class="space-y-2">
-          <p class="text-sm">¿Seguro que querés cerrar el turno seleccionado?</p>
-          <p class="text-xs text-gray-500">Esta acción no se puede deshacer.</p>
-        </div>
-
-        <template #footer>
-          <div class="flex justify-end gap-2">
-            <UButton variant="outline" color="neutral" :disabled="deleting" @click="openConfirmCheckOut = false">
-              Cancelar
-            </UButton>
-
-            <UButton color="error" :loading="deleting" @click="confirmCheckout">
-              Cerrar
-            </UButton>
-          </div>
-        </template>
-      </UCard>
-    </template>
-  </UModal>
+  <ConfirmModal
+    v-model:open="openConfirmCheckOut"
+    title="Cerrar turno"
+    message="¿Seguro que querés cerrar el turno seleccionado?"
+    confirm-label="Cerrar"
+    :loading="deleting"
+    @confirm="confirmCheckout"
+  />
 </template>

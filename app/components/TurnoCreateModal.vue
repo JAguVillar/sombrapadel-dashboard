@@ -6,8 +6,6 @@ import {
   CalendarDate,
   parseTime,
 } from "@internationalized/date";
-import { useToast } from "#imports";
-
 const { createBooking } = useBookings();
 const { loadBookingTypes } = useBookingsTypes();
 const { loadCourts } = useCourts();

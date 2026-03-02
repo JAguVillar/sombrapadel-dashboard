@@ -9,8 +9,9 @@
     </template>
 
     <template #body>
-      hiokakj
-      <!-- tu componente de tabla -->
+      <div class="flex items-center justify-center py-12 text-sm text-muted">
+        Próximamente: vista de tabla de turnos.
+      </div>
     </template>
   </UDashboardPanel>
 </template>

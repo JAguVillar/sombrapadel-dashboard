@@ -7,13 +7,11 @@ const links = [
       label: "Turnos · Calendario",
       icon: "i-lucide-calendar-days",
       to: "/turnos/calendario",
-      onSelect: () => (open.value = false),
     },
     {
       label: "Turnos · Tabla",
       icon: "i-lucide-table",
       to: "/turnos/tabla",
-      onSelect: () => (open.value = false),
     },
   ],
   [
@@ -21,13 +19,11 @@ const links = [
       label: "Clientes",
       icon: "i-lucide-users",
       to: "/clientes",
-      onSelect: () => (open.value = false),
     },
     {
       label: "Productos",
       icon: "i-lucide-box",
       to: "/productos",
-      onSelect: () => (open.value = false),
     },
   ],
 ];

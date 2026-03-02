@@ -9,7 +9,9 @@ defineProps({
 
 <template>
   <div class="space-y-3">
-    <UTable :data="rows" :columns="columns" :loading="loading" class="flex-1" />
+    <div class="overflow-x-auto">
+      <UTable :data="rows" :columns="columns" :loading="loading" class="flex-1" />
+    </div>
     <div
       v-if="!loading && rows.length === 0"
       class="py-6 text-center text-sm text-gray-500"

@@ -1,5 +1,3 @@
 <script setup>
-definePageMeta({
-  redirect: "/turnos/calendario",
-});
+await navigateTo('/turnos/calendario', { redirectCode: 301, replace: true })
 </script>

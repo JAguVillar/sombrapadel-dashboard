@@ -1,6 +1,4 @@
 <script setup>
-import { ref, computed, onMounted } from "vue"
-
 const emit = defineEmits(["add", "close"])
 const { loadProducts } = useProducts()
 
@@ -42,11 +40,11 @@ function add() {
     </template>
 
     <div class="space-y-4">
-      <div class="flex gap-4">
+      <div class="flex flex-col gap-3 sm:flex-row sm:gap-4">
         <USelectMenu v-model="selected" :items="items" value-attribute="value" option-attribute="label" searchable
           :search-attributes="['label']" placeholder="Seleccioná un producto" class="w-full" clear />
         <div class="flex items-center gap-2">
-          <UInputNumber v-model="qty" :min="1" :disabled="!selected" />
+          <UInputNumber v-model="qty" :min="1" :disabled="!selected" class="w-full sm:w-auto" />
         </div>
       </div>
 

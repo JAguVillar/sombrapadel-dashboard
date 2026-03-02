@@ -1,6 +1,2 @@
 @import "tailwindcss";
 @import "@nuxt/ui";
-
-.prueba {
-  color: aquamarine;
-}

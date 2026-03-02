@@ -5,7 +5,6 @@ definePageMeta({ layout: "main" });
 
 const toast = useToast();
 const supabase = useSupabaseClient();
-const router = useRouter();
 
 const mode = ref("login");
 const loading = ref(false);
@@ -75,7 +74,7 @@ async function onSubmit({ data }) {
     }
 
     toast.add({ title: "Logged in", description: "Welcome back!" });
-    await router.push("/home"); // tu dashboard
+    await navigateTo("/turnos/calendario");
     return;
   }
 

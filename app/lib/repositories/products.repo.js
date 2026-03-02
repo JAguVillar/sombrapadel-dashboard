@@ -18,8 +18,8 @@ export function createProductsRepo(supabase) {
       if (error) {
         // unique violation (phone ya existe)
         if (error.code === "23505") {
-          const e = new Error("Ya existe un cliente con ese teléfono.");
-          e.code = "CLIENT_PHONE_EXISTS";
+          const e = new Error("Ya existe un producto con ese nombre.");
+          e.code = "PRODUCT_ALREADY_EXISTS";
           throw e;
         }
         throw error;

@@ -13,10 +13,8 @@ export function useBookings() {
     error.value = null;
 
     try {
-      const rows = await repo.listByRange({ fromISO, toISO }); // <-- RAW DB rows
-      console.log(rows);
-      
-      return (rows ?? []).map(mapBookingToScheduleXEvent).filter(Boolean); // por si algo viene raro
+      const rows = await repo.listByRange({ fromISO, toISO });
+      return (rows ?? []).map(mapBookingToScheduleXEvent).filter(Boolean);
     } catch (e) {
       error.value = e;
       throw e;
