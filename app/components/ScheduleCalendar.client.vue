@@ -205,6 +205,55 @@ function openWhatsappWeb(phoneDigits, message) {
   );
 }
 
+async function createGalioPaymentLink({ amount, title, referenceId }) {
+  const payload = {
+    items: [
+      {
+        title,
+        quantity: 1,
+        unitPrice: amount,
+        currencyId: "ARS",
+      },
+    ],
+    referenceId,
+    backUrl: {
+      success: "https://tusitio.com/pago-exitoso",
+      failure: "https://tusitio.com/pago-fallido",
+    },
+  };
+
+  return await $fetch("/api/galio/payment-link", {
+    method: "POST",
+    body: payload,
+  });
+}
+
+function buildWhatsappPaymentMessage({
+  clientName,
+  dateStr,
+  from,
+  to,
+  courtName,
+  title,
+  paymentUrl,
+  amountLabel,
+}) {
+  const headerName = clientName ? `Hola ${clientName}!` : "Hola!";
+  const t = title ? `📝 ${title}\n` : "";
+
+  return (
+    `👋 ${headerName}\n` +
+    `✅ Turno reservado\n\n` +
+    `📅 ${dateStr}\n` +
+    `⏰ ${from} - ${to}\n` +
+    (courtName ? `🎾 Cancha: ${courtName}\n` : "") +
+    t +
+    `\n💳 Para confirmar, aboná ${amountLabel} acá:\n` +
+    `${paymentUrl}\n\n` +
+    `Cualquier cosa respondé este mensaje.`
+  );
+}
+
 /** ✅ Handler que llama el modal */
 async function handleCreated(payload) {
   await getBookingsWeek();
@@ -216,7 +265,9 @@ async function handleCreated(payload) {
   const courtName =
     courts.value.find((c) => c.id === payload?.courtId)?.name ?? "";
 
-  const message = buildWhatsappMessage({
+  // 1) (opcional) mensaje de confirmación simple (el que ya tenías)
+  // Si preferís mandar SOLO el pago, comentá este bloque.
+  const confirmMessage = buildWhatsappMessage({
     clientName: client?.full_name ?? "",
     dateStr: payload?.date ?? "",
     from: payload?.from ?? "",
@@ -225,8 +276,52 @@ async function handleCreated(payload) {
     typeName: "",
     title: payload?.title ?? "",
   });
+  openWhatsappWeb(phoneDigits, confirmMessage);
 
-  openWhatsappWeb(phoneDigits, message);
+  // 2) generar link de pago
+  // Acá definís el monto: seña fija o porcentaje.
+  // EJ: seña fija
+  const amount = 3000;
+
+  // Si querés porcentaje del total, necesitás el total calculado en backend o tab, etc.
+  // const amount = Math.round(Number(payload?.total ?? 0) * 0.3)
+
+  if (!amount || amount <= 0) return;
+
+  const referenceId = payload?.bookingId
+    ? `turno-${payload.bookingId}`
+    : payload?.id
+      ? `turno-${payload.id}`
+      : `turno-${Date.now()}`;
+
+  let payment;
+  try {
+    payment = await createGalioPaymentLink({
+      amount,
+      title: `Seña turno ${courtName}`,
+      referenceId,
+    });
+  } catch (e) {
+    console.error("Error creando link de pago Galio:", e);
+    return;
+  }
+
+  const paymentUrl = payment?.url;
+  if (!paymentUrl) return;
+
+  // 3) mandar WhatsApp con link
+  const payMessage = buildWhatsappPaymentMessage({
+    clientName: client?.full_name ?? "",
+    dateStr: payload?.date ?? "",
+    from: payload?.from ?? "",
+    to: payload?.to ?? "",
+    courtName,
+    title: payload?.title ?? "",
+    paymentUrl,
+    amountLabel: `*$${amount}*`,
+  });
+
+  openWhatsappWeb(phoneDigits, payMessage);
 }
 
 /** ✅ DELETE: backend (si existe) + UI */
@@ -438,8 +533,6 @@ onMounted(async () => {
 
 <style>
 .customClass {
-  background: #fee2e2 !important;
-  color: #7f1d1d !important;
   border-left: 4px solid #ef4444 !important;
 }
 </style>

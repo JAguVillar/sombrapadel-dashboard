@@ -33,21 +33,21 @@ const typeItems = computed(() =>
   types.value.map((t) => ({
     label: t.name,
     value: t.id,
-  }))
+  })),
 );
 
 const courtItems = computed(() =>
   courts.value.map((c) => ({
     label: c.name,
     value: c.id,
-  }))
+  })),
 );
 
 const clientItems = computed(() =>
   clients.value.map((c) => ({
     label: c.full_name,
     value: c.id,
-  }))
+  })),
 );
 
 const submitting = ref(false);
@@ -93,7 +93,7 @@ function timeToHHMM(time) {
 }
 
 const date = shallowRef(
-  parseISOToCalendarDate(props.initialDate) ?? today(getLocalTimeZone())
+  parseISOToCalendarDate(props.initialDate) ?? today(getLocalTimeZone()),
 );
 
 const schema = z.object({
@@ -120,7 +120,7 @@ watch(
 
     state.from = parseHHMMToTime(f);
     state.to = parseHHMMToTime(t);
-  }
+  },
 );
 
 const toast = useToast();
@@ -232,11 +232,11 @@ const TZ = "America/Argentina/Buenos_Aires";
 
 function buildInstants({ date, from, to }) {
   const startZdt = globalThis.Temporal.ZonedDateTime.from(
-    `${date}T${from}:00-03:00[${TZ}]`
+    `${date}T${from}:00-03:00[${TZ}]`,
   );
 
   const endZdt = globalThis.Temporal.ZonedDateTime.from(
-    `${date}T${to}:00-03:00[${TZ}]`
+    `${date}T${to}:00-03:00[${TZ}]`,
   );
 
   return {
@@ -260,31 +260,69 @@ function buildInstants({ date, from, to }) {
       </UFormField>
 
       <UFormField label="Cliente" name="clienteId">
-        <USelectMenu v-model="state.clientId" :items="clientItems" value-attribute="value" option-attribute="label"
-          searchable :search-attributes="['label']" placeholder="Seleccioná un cliente" class="w-full">
+        <USelectMenu
+          v-model="state.clientId"
+          :items="clientItems"
+          value-attribute="value"
+          option-attribute="label"
+          searchable
+          :search-attributes="['label']"
+          placeholder="Seleccioná un cliente"
+          class="w-full"
+        >
           <template #search>
-            <UInput v-model="clientSearch" placeholder="Buscar cliente..." class="w-full" />
+            <UInput
+              v-model="clientSearch"
+              placeholder="Buscar cliente..."
+              class="w-full"
+            />
           </template>
         </USelectMenu>
       </UFormField>
 
       <UFormField label="Tipo de turno" name="bookingTypeId">
-        <USelect v-model="state.bookingTypeId" :items="typeItems" placeholder="Seleccioná un tipo" class="w-full" />
+        <USelect
+          v-model="state.bookingTypeId"
+          :items="typeItems"
+          placeholder="Seleccioná un tipo"
+          class="w-full"
+        />
       </UFormField>
 
       <UFormField label="Cancha" name="court">
-        <USelect v-model="state.courtId" :items="courtItems" placeholder="Seleccioná una cancha" class="w-full" />
+        <USelect
+          v-model="state.courtId"
+          :items="courtItems"
+          placeholder="Seleccioná una cancha"
+          class="w-full"
+        />
       </UFormField>
 
       <UFormField label="Fecha" name="date">
-        <UInputDate ref="inputDate" v-model="date" locale="es-AR" :min-value="minDate">
+        <UInputDate
+          ref="inputDate"
+          v-model="date"
+          locale="es-AR"
+          :min-value="minDate"
+        >
           <template #trailing>
             <UPopover :reference="inputDate?.inputsRef[3]?.$el">
-              <UButton color="neutral" variant="link" size="sm" icon="i-lucide-calendar" aria-label="Select a date"
-                class="px-0" />
+              <UButton
+                color="neutral"
+                variant="link"
+                size="sm"
+                icon="i-lucide-calendar"
+                aria-label="Select a date"
+                class="px-0"
+              />
 
               <template #content>
-                <UCalendar v-model="date" class="p-2" locale="es-AR" :min-value="minDate" />
+                <UCalendar
+                  v-model="date"
+                  class="p-2"
+                  locale="es-AR"
+                  :min-value="minDate"
+                />
               </template>
             </UPopover>
           </template>
