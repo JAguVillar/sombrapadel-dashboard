@@ -46,17 +46,7 @@ const links = [
       <template #default="{ collapsed }">
         <UNavigationMenu
           :collapsed="collapsed"
-          :items="links[0]"
-          orientation="vertical"
-          tooltip
-          popover
-        />
-
-        <div class="mt-4" />
-
-        <UNavigationMenu
-          :collapsed="collapsed"
-          :items="links[1]"
+          :items="links"
           orientation="vertical"
           tooltip
           popover
